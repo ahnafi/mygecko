@@ -156,10 +156,12 @@ void TaskInput(void *pvParameters) {
     }
 
     // =========================
-    // BUTTON KANAN
+    // BUTTON KANAN (Cancel / Batal)
     // =========================
     if (rightState == LOW && lastRightState == HIGH) {
-      Serial.println("menekan tombol kanan");
+      Serial.println("menekan tombol kanan (Batal)");
+      actionTriggered = false; // Batalkan aksi jika belum terproses
+      currentMenu = 0;         // Reset pilihan menu ke awal (opsional)
     }
 
     // =========================
