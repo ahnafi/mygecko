@@ -131,6 +131,11 @@ void TaskInput(void *pvParameters) {
   bool lastRightState = HIGH;
   bool lastTouchState = HIGH;
 
+  // Variabel Pelacak Double Tap Touch Sensor
+  int touchCount = 0;
+  TickType_t lastTouchTime = 0;
+  const TickType_t doubleTapTimeout = 600 / portTICK_PERIOD_MS; // Jeda maksimal 600ms untuk ketukan kedua
+
   for (;;) {
 
     // baca tombol
@@ -165,10 +170,30 @@ void TaskInput(void *pvParameters) {
     }
 
     // =========================
-    // TOUCH SENSOR
+    // TOUCH SENSOR (Double Tap / Pat Pat)
     // =========================
     if (touchState == LOW && lastTouchState == HIGH) {
-      Serial.println("touch sensor disentuh");
+      TickType_t currentTime = xTaskGetTickCount();
+      
+      // Jika ini ketukan pertama atau jarak dari ketukan sebelumnya terlalu lama
+      if (touchCount == 0 || (currentTime - lastTouchTime > doubleTapTimeout)) {
+        touchCount = 1;
+        lastTouchTime = currentTime;
+        Serial.println("[TOUCH] Tap 1... (Menunggu tap 2)");
+      } else {
+        // Ketukan kedua terdeteksi dalam batas waktu doubleTapTimeout
+        touchCount++;
+        if (touchCount == 2) {
+          Serial.println("sedang di pat pat ");
+          // Flag atau logika trigger animasi OLED dapat disisipkan di sini nantinya
+          touchCount = 0; // Reset counter
+        }
+      }
+    }
+
+    // Reset counter ke 0 jika batas waktu menunggu ketukan kedua sudah habis
+    if (touchCount > 0 && (xTaskGetTickCount() - lastTouchTime > doubleTapTimeout)) {
+      touchCount = 0;
     }
 
     // update state sebelumnya
