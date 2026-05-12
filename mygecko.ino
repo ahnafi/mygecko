@@ -70,6 +70,7 @@ void setup() {
               NULL); // stack 4096 berat
   xTaskCreate(TaskInput, "Task Input", 2048, NULL, 1, NULL);
   xTaskCreate(TaskSensor, "Task Sensor", 2048, NULL, 1, NULL);
+  xTaskCreate(TaskAudio, "Task Audio", 2048, NULL, 1, NULL);
 
   // scheduler sudah berjalan di ESP32 jadi fungsi vTaskStartScheduler tidak
   // diperlukan Menjalankan scheduler FreeRTOS Setelah ini, semua task akan
@@ -176,5 +177,28 @@ void TaskSensor(void *pvParameters) {
     Serial.println(ldrValue);
 
     vTaskDelay(2000 / portTICK_PERIOD_MS);
+  }
+}
+
+// TUGAS KELUARAN AUDIO / BUZZER
+void TaskAudio(void *pvParameters) {
+  for (;;) {
+    // Contoh Pola Melodi Peringatan Sederhana (2x Beep Pendek)
+    // Di masa depan, blok ini dapat diganti dengan logika pemutaran file musik
+    // via speaker
+
+    digitalWrite(buzzerPin, HIGH);
+    vTaskDelay(100 / portTICK_PERIOD_MS); // Bunyi 100ms
+
+    digitalWrite(buzzerPin, LOW);
+    vTaskDelay(100 / portTICK_PERIOD_MS); // Jeda 100ms
+
+    digitalWrite(buzzerPin, HIGH);
+    vTaskDelay(100 / portTICK_PERIOD_MS); // Bunyi 100ms
+
+    digitalWrite(buzzerPin, LOW);
+
+    // Jeda panjang sebelum mengulang melodi/pola suara (misal setiap 5 detik)
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
   }
 }
