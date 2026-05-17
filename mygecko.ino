@@ -5,6 +5,8 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
+#include <MainDisplay.h>
+
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define SCREEN_ADDRESS 0x3C
@@ -37,6 +39,11 @@ TickType_t statsEventStart = 0;
 // soundboard
 volatile bool soundBoardEvent = false;
 
+// Variabel Wajib dari Spesifikasi Tugas
+volatile bool playAnimation = false;
+volatile int animationFrame = 0;
+unsigned long lastAnimationFrame = 0;
+
 void setup(){
     Serial.begin(SERIAL_BAUDRATE);
 
@@ -63,9 +70,10 @@ void TaskDisplay(void *pvParameters){
 
     displayI2c.setTextSize(1);
     displayI2c.setTextColor(SSD1306_WHITE);
+    lastAnimationFrame = millis();
 
     for (;;) {
-
+        unsigned long currentMillis = millis();
         displayI2c.clearDisplay();
 
         if(patEvent){
@@ -104,12 +112,29 @@ void TaskDisplay(void *pvParameters){
                            statsEvent = false;
                        }
         }else {
+            unsigned long currentFrameDelay = MAIN_FRAME_DELAY;
+                 if (currentMillis - lastAnimationFrame >= currentFrameDelay) {
+                   lastAnimationFrame = currentMillis;
 
-            displayI2c.setCursor(40, 30);
-            displayI2c.println("MY GECKO");
-            Serial.println("[info] test display");
+                   // if (isPatpatAnimation) {
+                   //   displayI2c.drawBitmap(0, 0, patpat[animationFrame], SCREEN_WIDTH, SCREEN_HEIGHT, SSD1306_WHITE);
+                   //   displayI2c.display();
 
-            displayI2c.display();
+                   //   animationFrame++;
+                   //   if (animationFrame >= PATPAT_TOTAL_FRAMES) {
+                   //     animationFrame = 0;
+                   //     isPatpatAnimation = false;
+                   //     playAnimation = false;
+                   //   }
+                   // } else {
+                     displayI2c.drawBitmap(0, 0, video_frames[animationFrame], SCREEN_WIDTH, SCREEN_HEIGHT, SSD1306_WHITE);
+                     displayI2c.display();
+
+                     animationFrame++;
+                     if (animationFrame >= MAIN_TOTAL_FRAMES) {
+                       animationFrame = 0;
+                     }
+                   }
         }
 
         vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -223,23 +248,23 @@ void TaskAudio(void *pvParameters){
     for (;;) {
        if (soundBoardEvent){
            for (int thisNote = 0; thisNote < 42; thisNote++) {
-           
+
                // Menghitung durasi nada (misal: 1000ms / 4 = 250ms)
                int noteDuration = 1000 / noteDurations[thisNote];
-               
+
                // Mainkan nada
                ledcWriteTone(buzzerPin, melody[thisNote]);
-           
+
                // Beri jeda sesuai durasi nada
                vTaskDelay(noteDuration);
-           
+
                // Hentikan nada sejenak agar antar nada terdengar terpisah
                ledcWriteTone(buzzerPin, 0);
                vTaskDelay(noteDuration * 0.30);
              }
            soundBoardEvent = false;
-       } 
-        
+       }
+
       vTaskDelay(200 / portTICK_PERIOD_MS);
      }
 }
