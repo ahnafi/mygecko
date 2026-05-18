@@ -6,12 +6,15 @@
 #include <freertos/task.h>
 
 #include <MainDisplay.h>
+#include <Eat.h>
+#include <Dance.h>
+#include <Nono.h>
+#include <Patpat.h>
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define SCREEN_ADDRESS 0x3C
 #define SERIAL_BAUDRATE 115200
-#define DHTTYPE DHT11
 
 const int touchPin = 15;
 const int btnLeft = 5;
@@ -32,20 +35,25 @@ void TaskInput(void *pvParameters);
 void TaskAudio(void *pvParameters);
 
 // var global
-// pat pat event
-volatile bool patEvent = false;
-TickType_t patEventStart = 0;
-// eating
-volatile bool eatEvent = false;
-TickType_t eatEventStart = 0;
-// stats
-volatile bool statsEvent = false;
-TickType_t statsEventStart = 0;
-// soundboard
-volatile bool soundBoardEvent = false;
+enum EventType {
+  EV_NONE,
+  EV_PAT,
+  EV_EAT,
+  EV_STATS,
+  EV_MUSIC
+};
 
-// Variabel Wajib dari Spesifikasi Tugas
-volatile bool playAnimation = false;
+enum DisplayState {
+  STATE_IDLE,
+  STATE_PATTING,
+  STATE_EATING,
+  STATE_STATS,
+  STATE_DANCING
+};
+
+QueueHandle_t eventQueue;
+QueueHandle_t audioQueue;
+
 volatile int animationFrame = 0;
 unsigned long lastAnimationFrame = 0;
 
@@ -59,10 +67,12 @@ void setup() {
   pinMode(btnMid, INPUT_PULLUP);
   pinMode(btnRight, INPUT_PULLUP);
   pinMode(touchPin, INPUT_PULLUP);
-  // pinMode(buzzerPin, OUTPUT);
   ledcAttach(buzzerPin, 5000, 8);
 
   displayI2c.clearDisplay();
+
+  eventQueue = xQueueCreate(10, sizeof(EventType));
+  audioQueue = xQueueCreate(10, sizeof(EventType));
 
   xTaskCreate(TaskDisplay, "Task Display", 6144, NULL, 1, NULL);
   xTaskCreate(TaskInput, "Task Input", 2048, NULL, 1, NULL);
@@ -77,57 +87,85 @@ void TaskDisplay(void *pvParameters) {
   displayI2c.setTextColor(SSD1306_WHITE);
   lastAnimationFrame = millis();
 
+  DisplayState currentState = STATE_IDLE;
+  TickType_t stateStartTime = 0;
+
   for (;;) {
     unsigned long currentMillis = millis();
     displayI2c.clearDisplay();
 
-    if (patEvent) {
-
-      displayI2c.setCursor(0, 30);
-      displayI2c.println("PAT PAT");
-
-      displayI2c.display();
-
-      if (xTaskGetTickCount() - patEventStart >= 2000 / portTICK_PERIOD_MS) {
-        patEvent = false;
+    EventType newEvent;
+    if (xQueueReceive(eventQueue, &newEvent, 0) == pdTRUE) {
+      if (newEvent == EV_PAT) {
+        currentState = STATE_PATTING;
+        stateStartTime = xTaskGetTickCount();
+        animationFrame = 0;
+      } else if (newEvent == EV_EAT) {
+        currentState = STATE_EATING;
+        stateStartTime = xTaskGetTickCount();
+        animationFrame = 0;
+      } else if (newEvent == EV_STATS) {
+        currentState = STATE_STATS;
+        stateStartTime = xTaskGetTickCount();
+      } else if (newEvent == EV_MUSIC) {
+        currentState = STATE_DANCING;
+        stateStartTime = xTaskGetTickCount();
+        animationFrame = 0;
       }
+    }
 
-    } else if (eatEvent) {
-      displayI2c.setCursor(0, 30);
-      displayI2c.println("Eats nyam nyam");
-
-      displayI2c.display();
-
-      if (xTaskGetTickCount() - eatEventStart >= 2000 / portTICK_PERIOD_MS) {
-        eatEvent = false;
+    if (currentState != STATE_IDLE) {
+      if (xTaskGetTickCount() - stateStartTime >= 4000 / portTICK_PERIOD_MS) {
+        currentState = STATE_IDLE;
+        animationFrame = 0;
       }
-    } else if (statsEvent) {
+    }
+
+    if (currentState == STATE_PATTING) {
+      unsigned long currentFrameDelay = PATPAT_FRAME_DELAY;
+      if (currentMillis - lastAnimationFrame >= currentFrameDelay) {
+        lastAnimationFrame = currentMillis;
+        displayI2c.drawBitmap(0, 0, patpat_video_frames[animationFrame], SCREEN_WIDTH, SCREEN_HEIGHT, SSD1306_WHITE);
+        displayI2c.display();
+        animationFrame++;
+        if (animationFrame >= PATPAT_TOTAL_FRAMES) animationFrame = 0;
+      }
+    } else if (currentState == STATE_EATING) {
+      unsigned long currentFrameDelay = EAT_FRAME_DELAY;
+      if (currentMillis - lastAnimationFrame >= currentFrameDelay) {
+        lastAnimationFrame = currentMillis;
+        displayI2c.drawBitmap(0, 0, eat_video_frames[animationFrame], SCREEN_WIDTH, SCREEN_HEIGHT, SSD1306_WHITE);
+        displayI2c.display();
+        animationFrame++;
+        if (animationFrame >= EAT_TOTAL_FRAMES) animationFrame = 0;
+      }
+    } else if (currentState == STATE_STATS) {
       displayI2c.setCursor(0, 30);
       displayI2c.println("status kesehatan");
-
       displayI2c.display();
-
-      if (xTaskGetTickCount() - statsEventStart >= 2000 / portTICK_PERIOD_MS) {
-        statsEvent = false;
+    } else if (currentState == STATE_DANCING) {
+      unsigned long currentFrameDelay = DANCE_FRAME_DELAY;
+      if (currentMillis - lastAnimationFrame >= currentFrameDelay) {
+        lastAnimationFrame = currentMillis;
+        displayI2c.drawBitmap(0, 0, dance_video_frames[animationFrame], SCREEN_WIDTH, SCREEN_HEIGHT, SSD1306_WHITE);
+        displayI2c.display();
+        animationFrame++;
+        if (animationFrame >= DANCE_TOTAL_FRAMES) animationFrame = 0;
       }
     } else {
       unsigned long currentFrameDelay = MAIN_FRAME_DELAY;
       if (currentMillis - lastAnimationFrame >= currentFrameDelay) {
         lastAnimationFrame = currentMillis;
-
-        // if (isPatpatAnimation) {
-        //   displayI2c.drawBitmap(0, 0, patpat[animationFrame], SCREEN_WIDTH,
-        //   SCREEN_HEIGHT, SSD1306_WHITE); displayI2c.display();
-
-        //   animationFrame++;
-        //   if (animationFrame >= PATPAT_TOTAL_FRAMES) {
-        //     animationFrame = 0;
-        //     isPatpatAnimation = false;
-        //     playAnimation = false;
-        //   }
-        // } else {
-        displayI2c.drawBitmap(0, 0, video_frames[animationFrame], SCREEN_WIDTH,
-                              SCREEN_HEIGHT, SSD1306_WHITE);
+        
+        displayI2c.drawBitmap(
+            0,
+            0,
+            video_frames[animationFrame],
+            SCREEN_WIDTH,
+            SCREEN_HEIGHT, 
+            SSD1306_WHITE
+            );
+            
         displayI2c.display();
 
         animationFrame++;
@@ -137,7 +175,7 @@ void TaskDisplay(void *pvParameters) {
       }
     }
 
-    vTaskDelay(100 / portTICK_PERIOD_MS);
+    vTaskDelay(20 / portTICK_PERIOD_MS);
   }
 }
 
@@ -162,21 +200,23 @@ void TaskInput(void *pvParameters) {
     // BUTTON KIRI
     if (leftState == LOW && lastLeftState == HIGH) {
       Serial.println("menekan tombol kiri ");
-      eatEvent = true;
-      eatEventStart = xTaskGetTickCount();
+      EventType ev = EV_EAT;
+      xQueueSend(eventQueue, &ev, 0);
     }
 
     // BUTTON TENGAH
     if (middleState == LOW && lastMiddleState == HIGH) {
       Serial.println("menekan tombol tengah");
-      statsEvent = true;
-      statsEventStart = xTaskGetTickCount();
+      EventType ev = EV_STATS;
+      xQueueSend(eventQueue, &ev, 0);
     }
 
     // BUTTON KANAN
     if (rightState == LOW && lastRightState == HIGH) {
-      soundBoardEvent = true;
       Serial.println("menekan tombol kanan");
+      EventType ev = EV_MUSIC;
+      xQueueSend(eventQueue, &ev, 0);
+      xQueueSend(audioQueue, &ev, 0);
     }
 
     // TOUCH SENSOR
@@ -194,8 +234,8 @@ void TaskInput(void *pvParameters) {
         if (touchCount == 2) {
           Serial.println("[TOUCH] Pat-pat terdeteksi! Memicu animasi.");
           touchCount = 0; // Reset counter
-          patEvent = true;
-          patEventStart = xTaskGetTickCount();
+          EventType ev = EV_PAT;
+          xQueueSend(eventQueue, &ev, 0);
         }
       }
     }
@@ -239,25 +279,27 @@ void TaskAudio(void *pvParameters) {
                          4, 4, 4, 4, 4, 4, 2, 4, 4, 4, 4, 4, 4, 2,
                          4, 4, 4, 4, 4, 4, 2, 4, 4, 4, 4, 4, 4, 2};
   for (;;) {
-    if (soundBoardEvent) {
-      for (int thisNote = 0; thisNote < 42; thisNote++) {
+    EventType ev;
+    if (xQueueReceive(audioQueue, &ev, 0) == pdTRUE) {
+      if (ev == EV_MUSIC) {
+        for (int thisNote = 0; thisNote < 42; thisNote++) {
 
-        // Menghitung durasi nada (misal: 1000ms / 4 = 250ms)
-        int noteDuration = 1000 / noteDurations[thisNote];
+          // Menghitung durasi nada (misal: 1000ms / 4 = 250ms)
+          int noteDuration = 1000 / noteDurations[thisNote];
 
-        // Mainkan nada menggunakan pin langsung
-        ledcWriteTone(buzzerPin, melody[thisNote]);
+          // Mainkan nada menggunakan pin langsung
+          ledcWriteTone(buzzerPin, melody[thisNote]);
 
-        // Beri jeda sesuai durasi nada
-        vTaskDelay(pdMS_TO_TICKS(noteDuration));
+          // Beri jeda sesuai durasi nada
+          vTaskDelay(pdMS_TO_TICKS(noteDuration));
 
-        // Hentikan nada dengan mengatur siklus aktif ke nol
-        ledcWrite(buzzerPin, 0);
-        vTaskDelay(pdMS_TO_TICKS(noteDuration * 0.3));
+          // Hentikan nada dengan mengatur siklus aktif ke nol
+          ledcWrite(buzzerPin, 0);
+          vTaskDelay(pdMS_TO_TICKS(noteDuration * 0.3));
+        }
       }
-      soundBoardEvent = false;
     }
 
-    vTaskDelay(200 / portTICK_PERIOD_MS);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
   }
 }
