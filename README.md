@@ -5,7 +5,7 @@ Karakter dapat menampilkan berbagai respons seperti idle, makan, menolak saat ke
 
 ---
 
-[![Focus-Pet](https://i.ytimg.com/vi/9jbW2efTI9A/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLBlJlrwT5cN5qslTCOCo-cRr_akJA)](https://youtu.be/9jbW2efTI9A)
+[![My Gecko](https://i.ytimg.com/vi/9jbW2efTI9A/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLBlJlrwT5cN5qslTCOCo-cRr_akJA)](https://youtu.be/9jbW2efTI9A)
 
 ## 1. Cara Kerja
 Saat perangkat dinyalakan, ESP32 akan menginisialisasi seluruh komponen seperti OLED, tombol, touch sensor, dan buzzer. Setelah aktif, karakter MyGecko akan muncul pada layar OLED dalam kondisi idle animation.
