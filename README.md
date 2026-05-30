@@ -11,26 +11,25 @@ Karakter dapat menampilkan berbagai respons seperti idle, makan, menolak saat ke
 Saat perangkat dinyalakan, ESP32 akan menginisialisasi seluruh komponen seperti OLED, tombol, touch sensor, dan buzzer. Setelah aktif, karakter MyGecko akan muncul pada layar OLED dalam kondisi idle animation.
 
 Pengguna dapat berinteraksi melalui:
-#### Tombol kiri (Feed)
+#### a. Tombol kiri (Feed)
 Digunakan untuk memberi makan MyGecko.
 - Jika status masih tersedia → animasi makan
-- Jika status sudah penuh → animasi **No No**
+- Jika status sudah penuh → animasi No No
 
-#### Tombol tengah (Status)
+#### b. Tombol tengah (Status)
 Menampilkan kondisi/status karakter.
 
-#### Tombol kanan (Dance Mode)
+#### c.Tombol kanan (Dance Mode)
 Menjalankan animasi dance dan buzzer memainkan melodi.
 
-#### Touch Sensor
+#### d. Touch Sensor
 - Double tap pada sensor untuk mengelus MyGecko.
 - Karakter akan merespons dengan animasi pat-pat.
 
 ---
 ## 2. Alat dan Bahan
 
-| N
-o | Komponen | Jumlah |
+| No | Komponen | Jumlah |
 |---|---|---:|
 | 1 | ESP32 | 1 |
 | 2 | OLED SSD1306 128x64 | 1 |
@@ -43,11 +42,10 @@ o | Komponen | Jumlah |
 ---
 ## 3. Wiring Diagram
 
-```md
 ![wiring diagram](image.png)
-```
 
-Atau gunakan link berikut:
+
+Atau bisa diakses pada link berikut:
 🔗 https://wokwi.com/projects/465442161607389185
 
 #### Tabel Koneksi
@@ -106,7 +104,7 @@ Setiap file `.h` berisi kumpulan frame bitmap OLED:
 - Arduino ESP32 Core
 - FreeRTOS
 
-### Enum Event
+### a. Enum Event
 ```cpp
 enum EventType {
   EV_NONE,
@@ -121,7 +119,7 @@ Digunakan untuk menentukan jenis event dari input pengguna.
 
 ---
 
-### Membuat Task
+### b. Membuat Task
 ```cpp
 xTaskCreate(TaskDisplay, "Task Display", 6144, NULL, 1, NULL);
 xTaskCreate(TaskInput, "Task Input", 2048, NULL, 1, NULL);
@@ -132,7 +130,7 @@ Membagi sistem menjadi beberapa task agar berjalan multitasking.
 
 ---
 
-### Menampilkan Idle Animation
+### c. Menampilkan Idle Animation
 ```cpp
 displayI2c.drawBitmap(
     0,
@@ -148,7 +146,7 @@ Menampilkan frame bitmap ke OLED.
 
 ---
 
-### Membaca Event
+### d. Membaca Event
 ```cpp
 if (xQueueReceive(eventQueue, &newEvent, 0) == pdTRUE) {...}
 ```
@@ -157,7 +155,7 @@ Digunakan untuk membaca input dari queue.
 
 ---
 
-### Double Tap Touch Sensor
+### e. Double Tap Touch Sensor
 
 Touch sensor membaca dua sentuhan dalam waktu tertentu.
 
@@ -171,7 +169,7 @@ akan dikirim ke sistem lalu menampilkan animasi pat-pat.
 
 ---
 
-## Repository
+# Repository
 Dibuat oleh Atik Ahnafi dan Imedia Sholem untuk kebutuhan akademik
 
 Github:
